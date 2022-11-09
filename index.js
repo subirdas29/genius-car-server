@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require( 'cors');
 const app = express();
+const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
 require('dotenv').config()
 
@@ -20,6 +21,12 @@ async function run(){
         const serviceCollection = client.db('geniusCar').collection('services');
         const orderCollection = client.db('geniusCar').collection('orders');
 
+        app.post('/jwt',(req,res)=>{
+            const user = req.body;
+            const token = jwt.sign( user ,process.env.ACCESS_TOKEN_SECRET, { expiresIn:'1h' } );
+            res.send({token})
+        })
+
         app.get('/services',async(req,res)=>{
         const query = {} ;
         const cursor = serviceCollection.find(query);
@@ -35,12 +42,47 @@ async function run(){
             console.log(result)
             })
 
+        app.get('/orders',async(req,res)=>{
+            let query = {}; //query update hobe tai let dhora hoise
+            if(req.query.email)
+            {
+                query ={
+                    email:req.query.email
+                }
+            }
+            const cursor= orderCollection.find(query);
+            const order = await cursor.toArray();
+            res.send(order);
+        })
+
+        app.delete('/orders/:id',async(req,res)=>{
+            const id = req.params.id;
+            const query = {_id:ObjectId(id)}
+            const result = await orderCollection.deleteOne(query);
+            res.send(result)
+        })
+
+
+        app.patch('/orders/:id',async(req,res)=>{
+            const id=req.params.id;
+            const status= req.body.status;
+            const query = {_id:ObjectId(id)}
+            const doc = {
+                $set:{
+                    status:status
+                }
+            } 
+            const update = await orderCollection.updateOne(query,doc)
+            res.send(update);
+        })
+
+
         app.post('/orders',async(req,res)=>
         {
             const order = req.body;
             const result= await orderCollection.insertOne(order);
             res.send(result)
-            
+
         })
         
 
